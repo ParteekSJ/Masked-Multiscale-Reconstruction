@@ -24,12 +24,15 @@ def freeze_params(backbone):
 if __name__ == "__main__":
     cur_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     cfg = get_cfg()
+    device = torch.device(cfg.MODEL.device if torch.cuda.is_available() else "cpu")
     num_batches = cfg.TRAIN_SETUPS.batch_size
     # Initialize Models
     pretrained_feat_extractor = get_pretrained_extractor(return_nodes=cfg.MODEL.return_nodes)
+    pretrained_feat_extractor.to(device)
     freeze_params(pretrained_feat_extractor)  # freezing pt model weights
 
     mmr_model = MMR(cfg=cfg)  # MAE + FPN
+    mmr_model.to(device)
 
     # Load Dataset & Dataloaders
     dataset, dataloader = get_aebads(cfg)
@@ -51,6 +54,7 @@ if __name__ == "__main__":
         mmr_model.train()
 
         for idx, image in enumerate(dataloader):
+            image = image.to(device)
             with torch.no_grad():
                 pretrained_op_dict = pretrained_feat_extractor(image)
 
@@ -70,7 +74,7 @@ if __name__ == "__main__":
 
             if idx % cfg.MODEL.display_step == 0 and idx != 0:
                 print(
-                    f"[{idx}/{total_steps}]: {sum(running_loss[-cfg.MODEL.display_step:]) / cfg.MODEL.display_step}"
+                    f"[Epoch {epoch}, Step {idx}/{total_steps}]: {sum(running_loss[-cfg.MODEL.display_step:]) / cfg.MODEL.display_step}"
                 )
 
         avg_epoch_loss = fmean(running_loss[-total_steps:])
