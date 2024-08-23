@@ -86,6 +86,19 @@ AeBAD_S Folder Structure
 """
 
 
+def get_inverse_imagenet_transforms(cfg: CfgNode):
+    inverse_transforms = transforms.Compose(
+        [
+            transforms.Normalize(
+                mean=cfg.DATASET.INV_IMAGENET_MEAN,
+                std=cfg.DATASET.INV_IMAGENET_STD,
+            ),
+        ]
+    )
+    
+    return inverse_transforms
+
+
 class AeBAD_S_dataset(Dataset):
     def __init__(
         self,
