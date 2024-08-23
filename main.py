@@ -8,7 +8,7 @@ Created on Wed Aug 21 09:29:04 2024
 
 import torch
 from config.default import get_cfg
-from models.pretrained_feat_extractor import get_pretrained_extractor
+from models.pretrained_feat_extractor import get_pretrained_extractor, freeze_params
 from models.mmr import MMR
 from utils.loss import each_patch_loss_function
 from utils.optim_scheduler import mmr_lr_custom_scheduler
@@ -16,11 +16,6 @@ from dataset.aebad_S import get_aebads
 from datetime import datetime
 from statistics import fmean
 import os
-
-
-def freeze_params(backbone):
-    for para in backbone.parameters():
-        para.requires_grad = False
 
 
 def scratch_MAE_decoder(checkpoint):

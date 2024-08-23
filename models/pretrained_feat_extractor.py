@@ -6,10 +6,14 @@ Created on Tue Aug 20 10:35:21 2024
 @author: parteeksj
 """
 import sys
+
 sys.path.append("../")
 
 import torch
-from torchvision.models.feature_extraction import get_graph_node_names, create_feature_extractor
+from torchvision.models.feature_extraction import (
+    get_graph_node_names,
+    create_feature_extractor,
+)
 from torchvision.models import resnet50, ResNet50_Weights
 from torchvision import transforms
 from torchinfo import summary
@@ -17,11 +21,16 @@ import matplotlib.pyplot as plt
 import torch.fx as fx
 from PIL import Image
 
+
+def freeze_params(backbone):
+    for para in backbone.parameters():
+        para.requires_grad = False
+
+
 def get_pretrained_extractor(return_nodes):
     resnet_50_model = resnet50(weights=ResNet50_Weights.DEFAULT)
     feat_extractor = create_feature_extractor(model=resnet_50_model, return_nodes=return_nodes)
     return feat_extractor
-    
 
 
 if __name__ == "__main__":

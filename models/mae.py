@@ -14,7 +14,6 @@ import torch.nn as nn
 from timm.models.vision_transformer import PatchEmbed, Block
 from utils.pos_embed import get_2d_sincos_pos_embed, get_abs_pos
 from utils.random_masking import random_masking
-from functools import partial
 from config.default import get_cfg
 import math
 
@@ -32,7 +31,7 @@ class MaskedAutoencoderViT(nn.Module):
         norm_layer: nn.Module = nn.LayerNorm,
     ):
         super().__init__()
-        
+
         self.embed_dim = embed_dim
 
         pretrain_image_size = 224
