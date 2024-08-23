@@ -32,9 +32,8 @@ class MaskedAutoencoderViT(nn.Module):
         norm_layer: nn.Module = nn.LayerNorm,
     ):
         super().__init__()
-
+        
         self.embed_dim = embed_dim
-        self.norm = norm_layer(normalized_shape=embed_dim)
 
         pretrain_image_size = 224
         self.pretrain_num_patches = (pretrain_image_size // patch_size) * (
@@ -73,6 +72,8 @@ class MaskedAutoencoderViT(nn.Module):
             ]
         )
 
+        self.norm = norm_layer(normalized_shape=embed_dim)
+
         ## MAE Decoder
         decoder_embed_dim = embed_dim  # no linear layer is used.
         self.mask_token = nn.Parameter(torch.zeros(1, 1, decoder_embed_dim))
@@ -109,7 +110,8 @@ class MaskedAutoencoderViT(nn.Module):
         w = self.patch_embed.proj.weight.data  # convolution layer. Shape: [1024, 1, 4, 4]
         torch.nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
 
-        # timm's trunc_normal_(std=.02) is effectively normal_(std=0.02) as cutoff is too big (2.)
+        # timm's trunc_normal_(std=.02) is effectively normal_(std=0.02)
+        # as cutoff is too big (2.)
         torch.nn.init.normal_(self.cls_token, std=0.02)
         torch.nn.init.normal_(self.mask_token, std=0.02)
 

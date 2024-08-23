@@ -259,8 +259,6 @@ class AeBAD_S_dataset(Dataset):
                 for image_path in image_paths
             ]
 
-            print("ss")
-
     def __len__(self):
         if self.ds_split == "train":
             # return len(self.train_images_arr)
