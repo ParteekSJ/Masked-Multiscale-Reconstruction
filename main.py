@@ -19,6 +19,7 @@ import os
 from inference import cal_anomaly_map
 from sklearn.metrics import roc_auc_score
 from utils.plot_predictions import plot_predictions
+from logger.logger import setup_logging, get_logger
 from utils.directory_fns import create_folders
 
 
@@ -30,22 +31,27 @@ def scratch_MAE_decoder(checkpoint):
 
 
 if __name__ == "__main__":
-    cur_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    cur_time = datetime.now().strftime("%Y-%m%d_%H%M%S")
     cfg = get_cfg()
+
     experiment_dir, checkpoints_dir, config_dir, log_dir = create_folders(cfg)
+
+    setup_logging(save_dir=log_dir, log_config=cfg.TRAIN_SETUPS.logger_json_dir)
+    logger = get_logger(name="train")  # log message printing
+
     # device = (
     #     "mps"
     #     if torch.backends.mps.is_available()
     #     else "cuda" if torch.cuda.is_available() else "cpu"
     # )
-    device = "cpu"
-    print(f"Using device: {device}")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    logger.info(f"Using device: {device}")
 
     # Initialize Models
     pretrained_feat_extractor = get_pretrained_extractor(return_nodes=cfg.MODEL.return_nodes)
     pretrained_feat_extractor.to(device)
     freeze_params(pretrained_feat_extractor)  # freezing pt model weights
-    print("Pretrained Model Loaded.")
+    logger.info("Pretrained Model Loaded.")
 
     mmr_model = MMR(cfg=cfg)  # MAE + FPN
     # Loading MAE-VIT-b Checkpoints
@@ -54,7 +60,7 @@ if __name__ == "__main__":
     ckpt = scratch_MAE_decoder(ckpt)
     mmr_model.mae.load_state_dict(ckpt["model"], strict=False)  # Load encoder-only weights
     mmr_model.to(device)
-    print("MMR Model Loaded.")
+    logger.info("MMR Model Loaded.")
 
     p = torch.load(
         f="/Users/parteeksj/Desktop/MMR_2024-08-22_19_30_07.pth", map_location="cpu"
@@ -63,8 +69,8 @@ if __name__ == "__main__":
 
     # Load Dataset & Dataloaders
     train_loader, test_loader = get_aebads(cfg)
-    print(f"Total Training Samples: {len(train_loader.dataset)}")
-    print(f"Total Testing Samples: {len(test_loader.dataset)}")
+    logger.info(f"Total Training Samples: {len(train_loader.dataset)}")
+    logger.info(f"Total Testing Samples: {len(test_loader.dataset)}")
 
     # Check if 'checkpoints' folder is created. If not, create one.
     if not os.path.exists(cfg.MODEL.save_ckpt):
@@ -79,7 +85,7 @@ if __name__ == "__main__":
     )
     scheduler = mmr_lr_custom_scheduler(optimizer, cfg)
 
-    print("Optimizer & Scheduler Defined.")
+    logger.info("Optimizer & Scheduler Defined.")
 
     best_loss = 100.0
     best_auroc = 0.0
@@ -114,7 +120,7 @@ if __name__ == "__main__":
             running_loss.append(loss.item())
 
             if idx % cfg.MODEL.display_step == 0 and idx != 0:
-                print(
+                logger.info(
                     f"[Epoch {epoch}, Step {idx}/{total_train_steps}]: {fmean(running_loss[-cfg.MODEL.display_step:])}"
                 )
 
@@ -128,19 +134,22 @@ if __name__ == "__main__":
                 "epoch": epoch,
                 "loss": avg_epoch_loss,
             }
-            torch.save(checkpoint, f"{cfg.MODEL.save_ckpt}/MMR_{cur_time}_LOSS.pth")
-            print(f"[{epoch}] MODEL SAVED with LOSS: {avg_epoch_loss}.")
+            torch.save(checkpoint, f"{checkpoints_dir}/MMR_{cur_time}_LOSS.pth")
+            logger.info(f"[{epoch}] MODEL SAVED with LOSS: {avg_epoch_loss}.")
             best_loss = avg_epoch_loss
 
         # PERFORM VALIDATION.
         if (epoch + 1) % cfg.TRAIN_SETUPS.validation_every_epoch == 0:
             mmr_model.eval()
 
-            auroc_arr = []
+            auroc_arr = []  # array to hold auroc scores.
 
-            # Perform validation using test dataset here.
-            for idx, (image, mask) in enumerate(test_loader):
-                image, mask = image.to(device), mask.to(device)
+            for idx, (image, mask, is_anom) in enumerate(test_loader):
+                image = image.to(device)
+
+                # Ignore "good" test samples since no ground-truth masks are available.
+                if is_anom == 0:
+                    continue
 
                 with torch.no_grad():
                     pretrained_op_dict = pretrained_feat_extractor(image)
@@ -160,15 +169,11 @@ if __name__ == "__main__":
                 mask[mask > 0.0] = 1.0
 
                 # Calculating the AUROC Score
-                auroc_score = roc_auc_score(
-                    mask.flatten(),
-                    torch.from_numpy(anomaly_map).flatten(),
-                )
-
+                auroc_score = roc_auc_score(mask.flatten(), anomaly_map.flatten())
                 auroc_arr.append(auroc_score)
 
                 if idx % cfg.MODEL.display_step == 0 and idx != 0:
-                    print(
+                    logger.info(
                         f"[Epoch {epoch}, Step {idx}/{total_test_steps}], AUROC: {fmean(auroc_arr[-cfg.MODEL.display_step:])}"
                     )
 
@@ -183,14 +188,16 @@ if __name__ == "__main__":
                 #     image_name=str(idx),
                 # )
 
-        avg_auroc = fmean(auroc_arr)
+            # Compute mean of the AUROC scores.
+            avg_auroc = fmean(auroc_arr)
 
-        if avg_auroc > best_auroc:
-            checkpoint = {
-                "model": mmr_model.state_dict(),
-                "epoch": epoch,
-                "auroc": avg_auroc,
-            }
-            torch.save(checkpoint, f"{cfg.MODEL.save_ckpt}/MMR_{cur_time}_AUROC.pth")
-            print(f"[{epoch}] MODEL SAVED with AUROC: {avg_auroc}.")
-            best_auroc = avg_auroc
+            if avg_auroc > best_auroc:
+                checkpoint = {
+                    "model": mmr_model.state_dict(),
+                    "epoch": epoch,
+                    "auroc": avg_auroc,
+                    "loss": avg_epoch_loss,
+                }
+                torch.save(checkpoint, f"{checkpoints_dir}/MMR_{cur_time}_AUROC.pth")
+                logger.info(f"[{epoch}] MODEL SAVED with AUROC: {avg_auroc}.")
+                best_auroc = avg_auroc
