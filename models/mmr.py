@@ -29,6 +29,7 @@ class MMR(nn.Module):
             depth=cfg.MODEL.depth,
             num_heads=cfg.MODEL.num_heads,
             mlp_ratio=cfg.MODEL.mlp_ratio,
+            mask_ratio=cfg.MODEL.mask_ratio,
             norm_layer=nn.LayerNorm,
         )
         self.fpn = FPN(
@@ -37,14 +38,14 @@ class MMR(nn.Module):
             decoder_embed_dim=cfg.MODEL.embed_dim,
             FPN_output_dim=cfg.MODEL.fpn_output_dim,
         )
-        
-        '''
+
+        """
         self.apply(self._init_weights): This won't be applied to the standalone models we've
         defined unless we call the method explicitly on those models.
         
         `apply` method is used to initialize weights of the MMR model itself.
-        '''
-        
+        """
+
         # initialize nn.Linear and nn.LayerNorm
         self.mae.apply(self._init_weights)
         self.fpn.apply(self._init_weights)
@@ -65,20 +66,19 @@ class MMR(nn.Module):
         return op_dict
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cfg = get_cfg()
     mmr_model = MMR(cfg)
     test_input = torch.randn(8, 3, 224, 224)
-    
+
     with torch.no_grad():
         op_dict = mmr_model(test_input)
-        
+
     for x in op_dict.keys():
-        print(f'{op_dict[x].shape=}')
+        print(f"{op_dict[x].shape=}")
 
 
-
-'''
+"""
 
 ===============================================================================================
 Layer (type:depth-idx)                        Input Shape               Output Shape
@@ -142,4 +142,4 @@ Estimated Total Size (MB): 1380.59
 ===============================================================================================
 
 
-'''
+"""

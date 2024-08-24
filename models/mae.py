@@ -28,11 +28,13 @@ class MaskedAutoencoderViT(nn.Module):
         depth: int = 24,
         num_heads: int = 16,
         mlp_ratio: float = 4.0,
+        mask_ratio: float = 0.4,
         norm_layer: nn.Module = nn.LayerNorm,
     ):
         super().__init__()
 
         self.embed_dim = embed_dim
+        self.mask_ratio = mask_ratio
 
         pretrain_image_size = 224
         self.pretrain_num_patches = (pretrain_image_size // patch_size) * (
@@ -117,7 +119,6 @@ class MaskedAutoencoderViT(nn.Module):
     def forward_encoder(
         self,
         x: torch.Tensor,
-        mask_ratio: float,
         ids_shuffle: torch.Tensor = None,
     ):
         # embed patches
@@ -131,7 +132,7 @@ class MaskedAutoencoderViT(nn.Module):
             x = x + self.pos_embed[:, 1:, :]  # [B, 196, 1024] (no cls token)
 
         # masking: length -> length * mask_ratio
-        x, mask, ids_restore = random_masking(x, mask_ratio, ids_shuffle)
+        x, mask, ids_restore = random_masking(x, self.mask_ratio, ids_shuffle)
         # x.shape=[B, 49, 1024], mask.shape=[B, 196], ids_restore.shape=[B, 196]
 
         # append cls token
@@ -169,19 +170,21 @@ class MaskedAutoencoderViT(nn.Module):
 
         return x_, ids_restore
 
-    def forward(self, imgs, mask_ratio=0.4):
-        latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
+    def forward(self, imgs):
+        latent, mask, ids_restore = self.forward_encoder(imgs)
         pred, ids_restore = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
         return pred, ids_restore
 
 
 if __name__ == "__main__":
     test_input = torch.randn(1, 3, 224, 224)
-    mae = MaskedAutoencoderViT()
     cfg = get_cfg()
+    mae = MaskedAutoencoderViT()
 
     with torch.no_grad():
         op = mae(test_input)
+        
+    print(op)
 
     # print(f"{op.shape=}")
 
