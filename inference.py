@@ -72,10 +72,8 @@ if __name__ == "__main__":
     )
 
     print("TEST DATA LOADED.")
-    
+
     for idx, (image, mask) in enumerate(dataloader):
-        image = image.unsqueeze(0)
-        
         with torch.no_grad():
             pretrained_op_dict = pretrained_feat_extractor(image)
 
@@ -89,7 +87,7 @@ if __name__ == "__main__":
             multi_scale_features, multi_scale_reverse_features
         )
 
-        plot_predictions(image.squeeze(0), mask, anomaly_map, cfg)
+        plot_predictions(image.squeeze(0), mask, anomaly_map, cfg, mode="2_2")
 
 
 # # return anomaly_map np.array (batch_size, imagesize, imagesize)

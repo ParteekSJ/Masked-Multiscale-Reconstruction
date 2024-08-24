@@ -87,7 +87,7 @@ AeBAD_S Folder Structure
 
 
 def get_inverse_imagenet_transforms(cfg: CfgNode):
-    inverse_transforms = transforms.Compose(
+    return transforms.Compose(
         [
             transforms.Normalize(
                 mean=cfg.DATASET.INV_IMAGENET_MEAN,
@@ -95,8 +95,6 @@ def get_inverse_imagenet_transforms(cfg: CfgNode):
             ),
         ]
     )
-    
-    return inverse_transforms
 
 
 class AeBAD_S_dataset(Dataset):
@@ -110,6 +108,7 @@ class AeBAD_S_dataset(Dataset):
         # Contains the train, test, and ground_truth files.
         self.parent_dir = cfg.DATASET.aebad_s_dir
         self.ds_split = split  # "train" or "test"
+        self.cfg = cfg
 
         # Defining a list of transforms.
         self.train_transforms = transforms.Compose(
@@ -275,9 +274,10 @@ class AeBAD_S_dataset(Dataset):
     def __len__(self):
         if self.ds_split == "train":
             # return len(self.train_images_arr)
-            return 14
+            return 3
         else:
-            return len(self.test_images_arr)
+            # return len(self.test_images_arr)
+            return 100
             # len_images = 0
             # for category in self.image_paths_dict.keys():
             #     for sub_category in self.image_paths_dict[category].keys():
@@ -301,19 +301,29 @@ class AeBAD_S_dataset(Dataset):
                 mask_path = self.masks_images_arr[index]
                 mask = Image.open(mask_path)
                 mask = self.mask_transforms(mask)
+
             else:
                 mask = torch.zeros([1, *image.size()[1:]])
 
             return image, mask
 
 
-def get_aebads(
-    cfg: CfgNode,
-):
-    dataset = AeBAD_S_dataset(cfg, "train")
-    dataloader = DataLoader(dataset, batch_size=cfg.TRAIN_SETUPS.batch_size, shuffle=True)
+def get_aebads(cfg: CfgNode):
+    train_dataset = AeBAD_S_dataset(cfg=cfg, split="train")
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=cfg.TRAIN_SETUPS.train_batch_size,
+        shuffle=True,
+    )
 
-    return dataset, dataloader
+    test_dataset = AeBAD_S_dataset(cfg=cfg, split="test")
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=cfg.TRAIN_SETUPS.test_batch_size,
+        shuffle=True,
+    )
+
+    return train_dataloader, test_dataloader
 
 
 if __name__ == "__main__":
