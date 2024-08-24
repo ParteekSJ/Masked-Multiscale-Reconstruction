@@ -19,6 +19,7 @@ import os
 from inference import cal_anomaly_map
 from sklearn.metrics import roc_auc_score
 from utils.plot_predictions import plot_predictions
+from utils.directory_fns import create_folders
 
 
 def scratch_MAE_decoder(checkpoint):
@@ -31,6 +32,7 @@ def scratch_MAE_decoder(checkpoint):
 if __name__ == "__main__":
     cur_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     cfg = get_cfg()
+    experiment_dir, checkpoints_dir, config_dir, log_dir = create_folders(cfg)
     # device = (
     #     "mps"
     #     if torch.backends.mps.is_available()
