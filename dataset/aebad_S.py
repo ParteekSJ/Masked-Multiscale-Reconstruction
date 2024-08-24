@@ -293,6 +293,7 @@ class AeBAD_S_dataset(Dataset):
 
             return transformed_image
         else:
+            is_anom = 0  # indicating non-anomalous
             image_path = self.test_images_arr[index]
             image = Image.open(image_path)
             image = self.test_transforms(image)
@@ -301,11 +302,12 @@ class AeBAD_S_dataset(Dataset):
                 mask_path = self.masks_images_arr[index]
                 mask = Image.open(mask_path)
                 mask = self.mask_transforms(mask)
+                is_anom = 1
 
             else:
                 mask = torch.zeros([1, *image.size()[1:]])
 
-            return image, mask
+            return image, mask, is_anom
 
 
 def get_aebads(cfg: CfgNode):
