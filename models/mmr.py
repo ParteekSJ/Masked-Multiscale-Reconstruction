@@ -43,7 +43,7 @@ class MMR(nn.Module):
         self.apply(self._init_weights): This won't be applied to the standalone models we've
         defined unless we call the method explicitly on those models.
         
-        `apply` method is used to initialize weights of the MMR model itself.
+        `apply` method would initialize weights of the MMR model itself.
         """
 
         # initialize nn.Linear and nn.LayerNorm

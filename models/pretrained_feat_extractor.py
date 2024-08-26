@@ -14,7 +14,12 @@ from torchvision.models.feature_extraction import (
     get_graph_node_names,
     create_feature_extractor,
 )
-from torchvision.models import resnet50, ResNet50_Weights
+from torchvision.models import (
+    resnet50,
+    ResNet50_Weights,
+    wide_resnet50_2,
+    Wide_ResNet50_2_Weights,
+)
 from torchvision import transforms
 from torchinfo import summary
 import matplotlib.pyplot as plt
@@ -28,8 +33,12 @@ def freeze_params(backbone):
 
 
 def get_pretrained_extractor(return_nodes):
-    resnet_50_model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    feat_extractor = create_feature_extractor(model=resnet_50_model, return_nodes=return_nodes)
+    # resnet_50_model = resnet50(weights=ResNet50_Weights.DEFAULT)
+    wideresnet_50_model = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)
+    feat_extractor = create_feature_extractor(
+        model=wideresnet_50_model, # resnet_50_model
+        return_nodes=return_nodes,
+    )
     return feat_extractor
 
 
