@@ -6,7 +6,6 @@ import os
 from glob import glob
 from dataset.mvtec import MVTecDataset
 from torch.utils.data import DataLoader
-from config.default import get_cfg
 
 
 class AeBAD_SDataset(MVTecDataset):
@@ -97,14 +96,14 @@ def png_load(anomaly_path, sub_good_train, imgpaths_per_class, classname, anomal
 
 def get_aebadS_data(cfg):
     train_dataset = AeBAD_SDataset(
-        source="/Users/parteeksj/Desktop/DATASETS/AeBAD",
+        source=cfg.DATASET.aebad_s_dir,
         classname="AeBAD_S",
         cfg=cfg,
         split="train",
     )
 
     test_dataset = AeBAD_SDataset(
-        source="/Users/parteeksj/Desktop/DATASETS/AeBAD",
+        source=cfg.DATASET.aebad_s_dir,
         classname="AeBAD_S",
         cfg=cfg,
         split="test",
@@ -127,8 +126,3 @@ def get_aebadS_data(cfg):
     return train_loader, test_loader
 
 
-if __name__ == "__main__":
-    cfg = get_cfg()
-    trl, tsl = get_aebadS_data(cfg)
-    
-    print('KINGS.')

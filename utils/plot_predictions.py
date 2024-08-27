@@ -5,6 +5,7 @@ sys.path.append("../")
 from fvcore.common.config import CfgNode
 import matplotlib.pyplot as plt
 import numpy as np
+from torch.utils.data import Dataset
 from torchvision import transforms
 import torch
 from PIL import Image
@@ -29,10 +30,12 @@ def plot_predictions(
     save_path: str = "",
     model_name: str = "",
 ):
+    resize_transforms = transforms.Compose([transforms.Resize(224), transforms.ToTensor()])
     
     image_path = data_dict['image_path'][0]
     image_name = data_dict['image_name'][0].split("/")[-1]
     mask = data_dict['mask']
+    resized_image = resize_transforms(Image.open(image_path))
 
     if mode == "1_3":
         fig, ax = plt.subplots(1, 3, figsize=(12, 12))
@@ -112,8 +115,8 @@ def plot_predictions(
 
 
         ax[1].title.set_text(f'{model_name}')
-        ax[1].imshow(Image.open(image_path))
-        ax[1].imshow(anom_map.squeeze(), cmap="turbo", alpha=0.65)
+        ax[1].imshow(resized_image.permute(1,2,0))
+        ax[1].imshow(anom_map.squeeze(), cmap="jet", alpha=0.55)
         plt.tight_layout()
 
         if save_path != "":

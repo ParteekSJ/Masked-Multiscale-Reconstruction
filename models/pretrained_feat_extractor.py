@@ -24,8 +24,7 @@ from torchvision import transforms
 from torchinfo import summary
 import matplotlib.pyplot as plt
 import torch.fx as fx
-from PIL import Image
-
+s
 
 def freeze_params(backbone):
     for para in backbone.parameters():
@@ -33,24 +32,18 @@ def freeze_params(backbone):
 
 
 def get_pretrained_extractor(return_nodes):
-    # resnet_50_model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    wideresnet_50_model = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)
+    # rn50 = resnet50(weights=ResNet50_Weights.DEFAULT)
+    wrn50 = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)
     feat_extractor = create_feature_extractor(
-        model=wideresnet_50_model, # resnet_50_model
+        # model=rn50,
+        model=wrn50,
         return_nodes=return_nodes,
     )
     return feat_extractor
 
 
 if __name__ == "__main__":
-    image = Image.open(fp="/Users/parteeksj/Desktop/Personal/PICS/GGatk6IbEAADxXj.jpg")
-    T = transforms.Compose(
-        [
-            transforms.CenterCrop(224),
-            transforms.Resize(224),
-            transforms.ToTensor(),
-        ]
-    )
+    image = torch.randn(1, 3, 224, 224)
     resnet_50_model = resnet50(weights=ResNet50_Weights.DEFAULT)
 
     # return node names in order of execution
@@ -63,7 +56,7 @@ if __name__ == "__main__":
     feat_extractor = create_feature_extractor(model=resnet_50_model, return_nodes=return_nodes)
 
     with torch.no_grad():
-        out = feat_extractor(T(image).unsqueeze(0))
+        out = feat_extractor(image)
 
     print("DONE.")
 
