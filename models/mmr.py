@@ -29,7 +29,6 @@ class MMR(nn.Module):
             depth=cfg.MODEL.depth,
             num_heads=cfg.MODEL.num_heads,
             mlp_ratio=cfg.MODEL.mlp_ratio,
-            mask_ratio=cfg.MODEL.mask_ratio,
             norm_layer=nn.LayerNorm,
         )
         self.fpn = FPN(
@@ -60,8 +59,8 @@ class MMR(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(self, x):
-        pred, ids_restore = self.mae(x)
+    def forward(self, x, mask_ratio):
+        pred, ids_restore = self.mae(x, mask_ratio)
         op_dict = self.fpn(pred, ids_restore)
         return op_dict
 
@@ -72,7 +71,7 @@ if __name__ == "__main__":
     test_input = torch.randn(8, 3, 224, 224)
 
     with torch.no_grad():
-        op_dict = mmr_model(test_input)
+        op_dict = mmr_model(test_input, 0.4)
 
     for x in op_dict.keys():
         print(f"{op_dict[x].shape=}")

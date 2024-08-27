@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Aug 23 09:52:26 2024
-
-@author: parteeksj
-"""
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -17,6 +10,7 @@ from models.mmr import MMR
 from utils.plot_predictions import plot_predictions
 from sklearn.metrics import roc_auc_score
 from statistics import fmean
+from scipy.ndimage import gaussian_filter
 
 
 def cal_anomaly_map(fs_list, ft_list, out_size=224, amap_mode="mul"):
@@ -42,14 +36,8 @@ def cal_anomaly_map(fs_list, ft_list, out_size=224, amap_mode="mul"):
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    inv_transforms = get_inverse_imagenet_transforms(cfg)
 
-    # device = (
-    #     "mps"
-    #     if torch.backends.mps.is_available()
-    #     else "cuda" if torch.cuda.is_available() else "cpu"
-    # )
-    device = "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
     # Initialize Models
@@ -75,6 +63,9 @@ if __name__ == "__main__":
 
     mmr_model.mae.load_state_dict(new_state_dict, strict=False)
     mmr_model.fpn.load_state_dict(new_state_dict, strict=False)
+    
+    
+    pretrained_feat_extractor.eval()
     mmr_model.eval()
 
     # mmr_model.load_state_dict(ck)
@@ -102,25 +93,28 @@ if __name__ == "__main__":
     # auroc_arr = []
 
     for idx, item in enumerate(dataloader):
-        image = item["image"].to(device)
-        # mask = item["mask"]
-
         # Ignore "good" test samples since no ground-truth masks are available.
         if item["is_anomaly"].item() == 0:
             continue
+
+        image = item["image"].to(device)
+        # mask = item["mask"]
 
         with torch.no_grad():
             pretrained_op_dict = pretrained_feat_extractor(image)
 
         multi_scale_features = [pretrained_op_dict[key] for key in cfg.MODEL.return_nodes]
-        reverse_features = mmr_model(image)
+        reverse_features = mmr_model(image, mask_ratio=cfg.MODEL.test_mask_ratio)
         multi_scale_reverse_features = [
             reverse_features[key] for key in cfg.MODEL.return_nodes
         ]
 
         anomaly_map, amap_list = cal_anomaly_map(
-            multi_scale_features, multi_scale_reverse_features
+            multi_scale_features,
+            multi_scale_reverse_features,
+            amap_mode="a",
         )
+        anomaly_map = gaussian_filter(anomaly_map, sigma=4)
 
         # # Thresholding the Mask
         # mask[mask > 0.0] = 1.0
@@ -141,17 +135,5 @@ if __name__ == "__main__":
 
     # avg_auroc_score = fmean(auroc_arr)
     # print(f"average AUROC score: {avg_auroc_score}")
-
-
-# # return anomaly_map np.array (batch_size, imagesize, imagesize)
-#             anomaly_map, _ = cal_anomaly_map(multi_scale_features, multi_scale_reverse_features, image.shape[-1],
-#                                              amap_mode='a')
-#             for item in range(len(anomaly_map)):
-#                 anomaly_map[item] = gaussian_filter(anomaly_map[item], sigma=4)
-
-
-"""
-
-odict_keys(['cls_token', 'pos_embed', 'decoder_FPN_mask_token', 'decoder_FPN_pos_embed', 'patch_embed.proj.weight', 'patch_embed.proj.bias', 'blocks.0.norm1.weight', 'blocks.0.norm1.bias', 'blocks.0.attn.qkv.weight', 'blocks.0.attn.qkv.bias', 'blocks.0.attn.proj.weight', 'blocks.0.attn.proj.bias', 'blocks.0.norm2.weight', 'blocks.0.norm2.bias', 'blocks.0.mlp.fc1.weight', 'blocks.0.mlp.fc1.bias', 'blocks.0.mlp.fc2.weight', 'blocks.0.mlp.fc2.bias', 'blocks.1.norm1.weight', 'blocks.1.norm1.bias', 'blocks.1.attn.qkv.weight', 'blocks.1.attn.qkv.bias', 'blocks.1.attn.proj.weight', 'blocks.1.attn.proj.bias', 'blocks.1.norm2.weight', 'blocks.1.norm2.bias', 'blocks.1.mlp.fc1.weight', 'blocks.1.mlp.fc1.bias', 'blocks.1.mlp.fc2.weight', 'blocks.1.mlp.fc2.bias', 'blocks.2.norm1.weight', 'blocks.2.norm1.bias', 'blocks.2.attn.qkv.weight', 'blocks.2.attn.qkv.bias', 'blocks.2.attn.proj.weight', 'blocks.2.attn.proj.bias', 'blocks.2.norm2.weight', 'blocks.2.norm2.bias', 'blocks.2.mlp.fc1.weight', 'blocks.2.mlp.fc1.bias', 'blocks.2.mlp.fc2.weight', 'blocks.2.mlp.fc2.bias', 'blocks.3.norm1.weight', 'blocks.3.norm1.bias', 'blocks.3.attn.qkv.weight', 'blocks.3.attn.qkv.bias', 'blocks.3.attn.proj.weight', 'blocks.3.attn.proj.bias', 'blocks.3.norm2.weight', 'blocks.3.norm2.bias', 'blocks.3.mlp.fc1.weight', 'blocks.3.mlp.fc1.bias', 'blocks.3.mlp.fc2.weight', 'blocks.3.mlp.fc2.bias', 'blocks.4.norm1.weight', 'blocks.4.norm1.bias', 'blocks.4.attn.qkv.weight', 'blocks.4.attn.qkv.bias', 'blocks.4.attn.proj.weight', 'blocks.4.attn.proj.bias', 'blocks.4.norm2.weight', 'blocks.4.norm2.bias', 'blocks.4.mlp.fc1.weight', 'blocks.4.mlp.fc1.bias', 'blocks.4.mlp.fc2.weight', 'blocks.4.mlp.fc2.bias', 'blocks.5.norm1.weight', 'blocks.5.norm1.bias', 'blocks.5.attn.qkv.weight', 'blocks.5.attn.qkv.bias', 'blocks.5.attn.proj.weight', 'blocks.5.attn.proj.bias', 'blocks.5.norm2.weight', 'blocks.5.norm2.bias', 'blocks.5.mlp.fc1.weight', 'blocks.5.mlp.fc1.bias', 'blocks.5.mlp.fc2.weight', 'blocks.5.mlp.fc2.bias', 'blocks.6.norm1.weight', 'blocks.6.norm1.bias', 'blocks.6.attn.qkv.weight', 'blocks.6.attn.qkv.bias', 'blocks.6.attn.proj.weight', 'blocks.6.attn.proj.bias', 'blocks.6.norm2.weight', 'blocks.6.norm2.bias', 'blocks.6.mlp.fc1.weight', 'blocks.6.mlp.fc1.bias', 'blocks.6.mlp.fc2.weight', 'blocks.6.mlp.fc2.bias', 'blocks.7.norm1.weight', 'blocks.7.norm1.bias', 'blocks.7.attn.qkv.weight', 'blocks.7.attn.qkv.bias', 'blocks.7.attn.proj.weight', 'blocks.7.attn.proj.bias', 'blocks.7.norm2.weight', 'blocks.7.norm2.bias', 'blocks.7.mlp.fc1.weight', 'blocks.7.mlp.fc1.bias', 'blocks.7.mlp.fc2.weight', 'blocks.7.mlp.fc2.bias', 'blocks.8.norm1.weight', 'blocks.8.norm1.bias', 'blocks.8.attn.qkv.weight', 'blocks.8.attn.qkv.bias', 'blocks.8.attn.proj.weight', 'blocks.8.attn.proj.bias', 'blocks.8.norm2.weight', 'blocks.8.norm2.bias', 'blocks.8.mlp.fc1.weight', 'blocks.8.mlp.fc1.bias', 'blocks.8.mlp.fc2.weight', 'blocks.8.mlp.fc2.bias', 'blocks.9.norm1.weight', 'blocks.9.norm1.bias', 'blocks.9.attn.qkv.weight', 'blocks.9.attn.qkv.bias', 'blocks.9.attn.proj.weight', 'blocks.9.attn.proj.bias', 'blocks.9.norm2.weight', 'blocks.9.norm2.bias', 'blocks.9.mlp.fc1.weight', 'blocks.9.mlp.fc1.bias', 'blocks.9.mlp.fc2.weight', 'blocks.9.mlp.fc2.bias', 'blocks.10.norm1.weight', 'blocks.10.norm1.bias', 'blocks.10.attn.qkv.weight', 'blocks.10.attn.qkv.bias', 'blocks.10.attn.proj.weight', 'blocks.10.attn.proj.bias', 'blocks.10.norm2.weight', 'blocks.10.norm2.bias', 'blocks.10.mlp.fc1.weight', 'blocks.10.mlp.fc1.bias', 'blocks.10.mlp.fc2.weight', 'blocks.10.mlp.fc2.bias', 'blocks.11.norm1.weight', 'blocks.11.norm1.bias', 'blocks.11.attn.qkv.weight', 'blocks.11.attn.qkv.bias', 'blocks.11.attn.proj.weight', 'blocks.11.attn.proj.bias', 'blocks.11.norm2.weight', 'blocks.11.norm2.bias', 'blocks.11.mlp.fc1.weight', 'blocks.11.mlp.fc1.bias', 'blocks.11.mlp.fc2.weight', 'blocks.11.mlp.fc2.bias', 'norm.weight', 'norm.bias', 'simfp_2.0.weight', 'simfp_2.0.bias', 'simfp_2.1.weight', 'simfp_2.1.bias', 'simfp_2.3.weight', 'simfp_2.3.bias', 'simfp_2.4.weight', 'simfp_2.4.norm.weight', 'simfp_2.4.norm.bias', 'simfp_2.5.weight', 'simfp_2.5.norm.weight', 'simfp_2.5.norm.bias', 'simfp_3.0.weight', 'simfp_3.0.bias', 'simfp_3.1.weight', 'simfp_3.1.norm.weight', 'simfp_3.1.norm.bias', 'simfp_3.2.weight', 'simfp_3.2.norm.weight', 'simfp_3.2.norm.bias', 'simfp_4.0.weight', 'simfp_4.0.norm.weight', 'simfp_4.0.norm.bias', 'simfp_4.1.weight', 'simfp_4.1.norm.weight', 'simfp_4.1.norm.bias'])
-
-"""
+    
+        print('THE END.')

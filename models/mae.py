@@ -28,13 +28,11 @@ class MaskedAutoencoderViT(nn.Module):
         depth: int = 24,
         num_heads: int = 16,
         mlp_ratio: float = 4.0,
-        mask_ratio: float = 0.4,
         norm_layer: nn.Module = nn.LayerNorm,
     ):
         super().__init__()
 
         self.embed_dim = embed_dim
-        self.mask_ratio = mask_ratio
 
         pretrain_image_size = 224
         self.pretrain_num_patches = (pretrain_image_size // patch_size) * (
@@ -77,7 +75,10 @@ class MaskedAutoencoderViT(nn.Module):
 
         ## MAE Decoder
         decoder_embed_dim = embed_dim  # no linear layer is used.
-        self.mask_token = nn.Parameter(torch.zeros(1, 1, decoder_embed_dim))
+        self.mask_token = nn.Parameter(
+            torch.zeros(1, 1, decoder_embed_dim),
+            requires_grad=True,
+        )
 
         # Creating Decoder Positional Embedding
         self.decoder_pos_embed = nn.Parameter(
@@ -119,6 +120,7 @@ class MaskedAutoencoderViT(nn.Module):
     def forward_encoder(
         self,
         x: torch.Tensor,
+        mask_ratio: float,
         ids_shuffle: torch.Tensor = None,
     ):
         # embed patches
@@ -132,7 +134,11 @@ class MaskedAutoencoderViT(nn.Module):
             x = x + self.pos_embed[:, 1:, :]  # [B, 196, 1024] (no cls token)
 
         # masking: length -> length * mask_ratio
-        x, mask, ids_restore = random_masking(x, self.mask_ratio, ids_shuffle)
+        x, mask, ids_restore = random_masking(
+            x,
+            mask_ratio=mask_ratio,
+            ids_shuffle=ids_shuffle,
+        )
         # x.shape=[B, 49, 1024], mask.shape=[B, 196], ids_restore.shape=[B, 196]
 
         # append cls token
@@ -170,8 +176,8 @@ class MaskedAutoencoderViT(nn.Module):
 
         return x_, ids_restore
 
-    def forward(self, imgs):
-        latent, mask, ids_restore = self.forward_encoder(imgs)
+    def forward(self, imgs, mask_ratio):
+        latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
         pred, ids_restore = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
         return pred, ids_restore
 
@@ -183,7 +189,7 @@ if __name__ == "__main__":
 
     with torch.no_grad():
         op = mae(test_input)
-        
+
     print(op)
 
     # print(f"{op.shape=}")

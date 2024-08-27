@@ -13,7 +13,7 @@ from models.pretrained_feat_extractor import get_pretrained_extractor, freeze_pa
 from models.mmr import MMR
 from utils.loss import each_patch_loss_function
 from utils.optim_scheduler import mmr_adjust_learning_rate
-from dataset.aebad_S import get_aebadS_data
+from dataset.aebad_V import get_aebadV_data
 from datetime import datetime
 from statistics import fmean
 from inference import cal_anomaly_map
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     setup_logging(save_dir=log_dir, log_config=cfg.TRAIN_SETUPS.logger_json_dir)
     logger = get_logger(name="train")  # log message printing
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
     # Initialize Models
@@ -54,13 +54,8 @@ if __name__ == "__main__":
     mmr_model.to(device)
     logger.info("MMR Model Loaded.")
 
-    # p = torch.load(
-    #     f="/Users/parteeksj/Desktop/MMR_2024-08-22_19_30_07.pth", map_location="cpu"
-    # )
-    # mmr_model.load_state_dict(p["model"])
-
     # Load Dataset & Dataloaders
-    train_loader, test_loader = get_aebadS_data(cfg=cfg)
+    train_loader, test_loader = get_aebadV_data(cfg=cfg)
     logger.info(f"Total Training Samples: {len(train_loader.dataset)}")
     logger.info(f"Total Testing Samples: {len(test_loader.dataset)}")
 
@@ -94,7 +89,10 @@ if __name__ == "__main__":
 
             # MAE + FPN Output
             multi_scale_features = [pretrained_op_dict[key] for key in cfg.MODEL.return_nodes]
-            reverse_features = mmr_model(image)
+            reverse_features = mmr_model(
+                image,
+                mask_ratio=cfg.MODEL.finetune_mask_ratio,
+            )
             multi_scale_reverse_features = [
                 reverse_features[key] for key in cfg.MODEL.return_nodes
             ]
