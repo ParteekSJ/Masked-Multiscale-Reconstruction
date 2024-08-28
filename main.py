@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 21 09:29:04 2024
-
-@author: parteeksj
-"""
-
 import os
 import torch
 from config.aebad_V_config import get_cfg

@@ -2,14 +2,19 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from utils.plot_predictions import get_inverse_imagenet_transforms
+
+# from dataset.aebad_V import AeBAD_VDataset
 from dataset.aebad_V import AeBAD_VDataset
+
+# from config.aebad_V_config import get_cfg
 from config.aebad_V_config import get_cfg
 from models.pretrained_feat_extractor import get_pretrained_extractor, freeze_params
 from models.mmr import MMR
 from utils.plot_predictions import plot_predictions
-from sklearn.metrics import roc_auc_score
-from statistics import fmean
+from utils.compute_metrics import (
+    compute_pixelwise_retrieval_metrics,
+    compute_imagewise_retrieval_metrics,
+)
 from scipy.ndimage import gaussian_filter
 
 
@@ -63,8 +68,7 @@ if __name__ == "__main__":
 
     mmr_model.mae.load_state_dict(new_state_dict, strict=False)
     mmr_model.fpn.load_state_dict(new_state_dict, strict=False)
-    
-    
+
     pretrained_feat_extractor.eval()
     mmr_model.eval()
 
@@ -92,13 +96,17 @@ if __name__ == "__main__":
 
     # auroc_arr = []
 
+    label_gt_arr, label_pred_arr = [], []
+
     for idx, item in enumerate(dataloader):
-        # Ignore "good" test samples since no ground-truth masks are available.
-        if item["is_anomaly"].item() == 0:
-            continue
+        # # Ignore "good" test samples since no ground-truth masks are available.
+        # if item["is_anomaly"].item() == 0:
+        #     continue
+
+        label_gt = item["is_anomaly"].numpy()
+        label_gt_arr.append(label_gt)
 
         image = item["image"].to(device)
-        # mask = item["mask"]
 
         with torch.no_grad():
             pretrained_op_dict = pretrained_feat_extractor(image)
@@ -115,6 +123,9 @@ if __name__ == "__main__":
             amap_mode="a",
         )
         anomaly_map = gaussian_filter(anomaly_map, sigma=4)
+        label_pred = np.max(anomaly_map.reshape(anomaly_map.shape[0], -1), axis=1)
+
+        label_pred_arr.append(label_pred)
 
         # # Thresholding the Mask
         # mask[mask > 0.0] = 1.0
@@ -124,16 +135,17 @@ if __name__ == "__main__":
         # print(f"{idx} - {auroc_score}")
         # auroc_arr.append(auroc_score)
 
-        plot_predictions(
-            cfg=cfg,
-            data_dict=item,
-            anom_map=anomaly_map,
-            mode="1_1_OVERLAY",
-            model_name=model_name,
-            save_path="/Users/parteeksj/Desktop/saab",
-        )
+        # plot_predictions(
+        #     cfg=cfg,
+        #     data_dict=item,
+        #     anom_map=anomaly_map,
+        #     mode="1_1_OVERLAY",
+        #     model_name=model_name,
+        #     save_path="/Users/parteeksj/Desktop/sss",
+        # )
 
     # avg_auroc_score = fmean(auroc_arr)
     # print(f"average AUROC score: {avg_auroc_score}")
-    
-        print('THE END.')
+
+    results = compute_imagewise_retrieval_metrics(label_pred_arr, label_gt_arr)
+    print(results)

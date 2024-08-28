@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 20 10:35:21 2024
-
-@author: parteeksj
-"""
 import sys
 
 sys.path.append("../")
@@ -24,7 +17,6 @@ from torchvision import transforms
 from torchinfo import summary
 import matplotlib.pyplot as plt
 import torch.fx as fx
-s
 
 def freeze_params(backbone):
     for para in backbone.parameters():
@@ -32,11 +24,11 @@ def freeze_params(backbone):
 
 
 def get_pretrained_extractor(return_nodes):
-    # rn50 = resnet50(weights=ResNet50_Weights.DEFAULT)
-    wrn50 = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)
+    rn50 = resnet50(weights=ResNet50_Weights.DEFAULT)
+    # wrn50 = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)
     feat_extractor = create_feature_extractor(
-        # model=rn50,
-        model=wrn50,
+        model=rn50,
+        # model=wrn50,
         return_nodes=return_nodes,
     )
     return feat_extractor

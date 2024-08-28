@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 20 12:23:40 2024
-
-@author: parteeksj
-"""
 import sys
 
 sys.path.append("../")
