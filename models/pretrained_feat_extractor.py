@@ -18,17 +18,19 @@ from torchinfo import summary
 import matplotlib.pyplot as plt
 import torch.fx as fx
 
+
 def freeze_params(backbone):
     for para in backbone.parameters():
         para.requires_grad = False
 
 
-def get_pretrained_extractor(return_nodes):
-    rn50 = resnet50(weights=ResNet50_Weights.DEFAULT)
-    # wrn50 = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)
+def get_pretrained_extractor(cfg, return_nodes):
+    if cfg.MODEL.backbone == "wideresnet50":
+        pt_model = wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)
+    elif cfg.MODEL.backbone == "resnet50":
+        pt_model = resnet50(weights=ResNet50_Weights.DEFAULT)
     feat_extractor = create_feature_extractor(
-        model=rn50,
-        # model=wrn50,
+        model=pt_model,
         return_nodes=return_nodes,
     )
     return feat_extractor
