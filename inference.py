@@ -46,34 +46,22 @@ if __name__ == "__main__":
     print(f"Using device: {device}")
 
     # Initialize Models
-    pretrained_feat_extractor = get_pretrained_extractor(return_nodes=cfg.MODEL.return_nodes)
+    pretrained_feat_extractor = get_pretrained_extractor(
+        cfg=cfg, return_nodes=cfg.MODEL.return_nodes
+    )
     pretrained_feat_extractor.to(device)
     freeze_params(pretrained_feat_extractor)
 
-    model_name = "bestMMR"
+    model_name = "MMR_2024-0830_082945_LOSS"
     mmr_model = MMR(cfg=cfg)  # MAE + FPN
     ckpt = torch.load(
         f"/Users/parteeksj/Desktop/{model_name}.pth",
         map_location=device,
     )
-
-    new_state_dict = {
-        (
-            "mask_token"
-            if k == "decoder_FPN_mask_token"
-            else "decoder_embed_dim" if k == "decoder_FPN_pos_embed" else k
-        ): v
-        for k, v in ckpt["model"].items()
-    }
-
-    mmr_model.mae.load_state_dict(new_state_dict, strict=False)
-    mmr_model.fpn.load_state_dict(new_state_dict, strict=False)
+    mmr_model.load_state_dict(ckpt["model"])
 
     pretrained_feat_extractor.eval()
     mmr_model.eval()
-
-    # mmr_model.load_state_dict(ck)
-    # mmr_model.load_state_dict(ckpt["model"])
 
     print("MODELS LOADED.")
 
@@ -99,9 +87,9 @@ if __name__ == "__main__":
     label_gt_arr, label_pred_arr = [], []
 
     for idx, item in enumerate(dataloader):
-        # # Ignore "good" test samples since no ground-truth masks are available.
-        # if item["is_anomaly"].item() == 0:
-        #     continue
+        # Ignore "good" test samples since no ground-truth masks are available.
+        if item["is_anomaly"].item() == 0:
+            continue
 
         label_gt = item["is_anomaly"].numpy()
         label_gt_arr.append(label_gt)
@@ -135,17 +123,17 @@ if __name__ == "__main__":
         # print(f"{idx} - {auroc_score}")
         # auroc_arr.append(auroc_score)
 
-        # plot_predictions(
-        #     cfg=cfg,
-        #     data_dict=item,
-        #     anom_map=anomaly_map,
-        #     mode="1_1_OVERLAY",
-        #     model_name=model_name,
-        #     save_path="/Users/parteeksj/Desktop/sss",
-        # )
+        plot_predictions(
+            cfg=cfg,
+            data_dict=item,
+            anom_map=anomaly_map,
+            mode="1_1_OVERLAY",
+            model_name=model_name,
+            save_path="/Users/parteeksj/Desktop/sss",
+        )
 
     # avg_auroc_score = fmean(auroc_arr)
     # print(f"average AUROC score: {avg_auroc_score}")
 
-    results = compute_imagewise_retrieval_metrics(label_pred_arr, label_gt_arr)
-    print(results)
+    # results = compute_imagewise_retrieval_metrics(label_pred_arr, label_gt_arr)
+    # print(results)

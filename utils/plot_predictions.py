@@ -111,8 +111,7 @@ def plot_predictions(
         fig, ax = plt.subplots(1,2,figsize=(9,9))
             
         ax[0].set_title("Test Image")
-        ax[0].imshow(Image.open(image_path))
-
+        ax[0].imshow(Image.open(image_path)) 
 
         ax[1].title.set_text(f'{model_name}')
         ax[1].imshow(resized_image.permute(1,2,0))
